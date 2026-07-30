@@ -89,6 +89,11 @@
   <script>
     // 注册 Service Worker，支持「添加到桌面」后离线使用
     if ('serviceWorker' in navigator) {
+      // 新版本接管时自动刷新一次，确保加载最新代码（避免旧缓存卡住）
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) { refreshing = true; location.reload(); }
+      });
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
       });
