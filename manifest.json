@@ -1,0 +1,26 @@
+{
+  "name": "张张的工作台",
+  "short_name": "张张工作台",
+  "description": "张张的个人专属工作台 - 美少女战士主题手机端效率助手",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff0f7",
+  "theme_color": "#ffcce6",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

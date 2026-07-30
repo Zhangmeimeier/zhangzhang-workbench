@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#ffcce6">
+  <title>张张的工作台</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="张张工作台">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+</head>
+<body>
+  <!-- SVG 渐变定义 -->
+  <svg width="0" height="0" style="position:absolute;visibility:hidden;">
+    <defs>
+      <linearGradient id="mintGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#7ee8c7;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#4ad3a8;stop-opacity:1" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <div id="app">
+    <!-- 左侧导航栏 -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">🌙</div>
+      <div class="sidebar-nav" id="sidebarNav">
+        <!-- 导航项由 JS 生成 -->
+      </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+      <!-- 1. 每日工作任务 -->
+      <section class="page active" id="page-workTasks" data-page="workTasks"></section>
+
+      <!-- 2. 每日生活管理 -->
+      <section class="page" id="page-lifeManage" data-page="lifeManage"></section>
+
+      <!-- 3. 每日减脂饮食 -->
+      <section class="page" id="page-diet" data-page="diet"></section>
+
+      <!-- 4. 运动塑形锻炼 -->
+      <section class="page" id="page-exercise" data-page="exercise"></section>
+
+      <!-- 5. 自媒体每日灵感 -->
+      <section class="page" id="page-inspiration" data-page="inspiration"></section>
+
+      <!-- 6. 热点新闻 -->
+      <section class="page" id="page-news" data-page="news"></section>
+
+      <!-- 7. 成长书籍推荐 -->
+      <section class="page" id="page-books" data-page="books"></section>
+
+      <!-- 8. 理财存钱 -->
+      <section class="page" id="page-finance" data-page="finance"></section>
+
+      <!-- 9. 赚钱信息差 -->
+      <section class="page" id="page-moneyInfo" data-page="moneyInfo"></section>
+
+      <!-- 10. 自我提升 -->
+      <section class="page" id="page-selfImprovement" data-page="selfImprovement"></section>
+
+      <!-- 11. 博客精选 -->
+      <section class="page" id="page-blogs" data-page="blogs"></section>
+
+      <!-- 12. 养生 -->
+      <section class="page" id="page-wellness" data-page="wellness"></section>
+
+      <!-- 13. 我的树洞 -->
+      <section class="page" id="page-treeHole" data-page="treeHole"></section>
+    </main>
+  </div>
+
+  <!-- Toast 容器 -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- 弹窗 -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modalContent"></div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // 注册 Service Worker，支持「添加到桌面」后离线使用
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
