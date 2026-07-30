@@ -59,16 +59,41 @@
   let appData = Storage.get();
 
   // ==================== 数据迁移（让新增默认内容补进已有存档，不覆盖用户数据）====================
-  const DATA_VERSION = 2;
+  const DATA_VERSION = 3;
   (function migrate() {
     try {
-      // 自媒体灵感：补充宠物账号等新增选题（与已有选题去重合并）
       if (appData.__v !== DATA_VERSION) {
+        // 1. 自媒体灵感：补充新增选题（字符串数组去重）
         const defTopics = (WBData.inspiration && WBData.inspiration.topics) || [];
         if (appData.inspiration && Array.isArray(appData.inspiration.topics)) {
           const have = new Set(appData.inspiration.topics);
           defTopics.forEach(t => { if (!have.has(t)) { appData.inspiration.topics.push(t); have.add(t); } });
         }
+
+        // 2. 对象数组：按唯一字段去重合并（新增默认项目自动补进已有存档）
+        const arrayMerges = [
+          { path: ['inspiration', 'hotRemix'], idKey: 'title' },
+          { path: ['moneyInfo'], idKey: 'id' },
+          { path: ['news'], idKey: 'id' },
+          { path: ['blogs'], idKey: 'id' }
+        ];
+        arrayMerges.forEach(({ path, idKey }) => {
+          let defArr = WBData;
+          let savedArr = appData;
+          for (const p of path) { defArr = defArr && defArr[p]; savedArr = savedArr && savedArr[p]; }
+          defArr = defArr || [];
+          savedArr = savedArr || [];
+          if (Array.isArray(savedArr) && Array.isArray(defArr)) {
+            const haveIds = new Set(savedArr.map(item => item && item[idKey]).filter(v => v != null));
+            defArr.forEach(item => {
+              if (item && item[idKey] != null && !haveIds.has(item[idKey])) {
+                savedArr.push(item);
+                haveIds.add(item[idKey]);
+              }
+            });
+          }
+        });
+
         appData.__v = DATA_VERSION;
         save();
       }
