@@ -58,6 +58,25 @@
 
   let appData = Storage.get();
 
+  // ==================== 数据迁移（让新增默认内容补进已有存档，不覆盖用户数据）====================
+  const DATA_VERSION = 2;
+  (function migrate() {
+    try {
+      // 自媒体灵感：补充宠物账号等新增选题（与已有选题去重合并）
+      if (appData.__v !== DATA_VERSION) {
+        const defTopics = (WBData.inspiration && WBData.inspiration.topics) || [];
+        if (appData.inspiration && Array.isArray(appData.inspiration.topics)) {
+          const have = new Set(appData.inspiration.topics);
+          defTopics.forEach(t => { if (!have.has(t)) { appData.inspiration.topics.push(t); have.add(t); } });
+        }
+        appData.__v = DATA_VERSION;
+        save();
+      }
+    } catch (e) {
+      console.error('数据迁移失败', e);
+    }
+  })();
+
   // ==================== 通用 UI 组件 ====================
   const Toast = {
     show(msg) {

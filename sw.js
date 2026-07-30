@@ -1,5 +1,5 @@
 /* 张张的工作台 - Service Worker（离线缓存，让添加到桌面后无网也能打开） */
-const CACHE_NAME = 'zhangzhang-workbench-v1';
+const CACHE_NAME = 'zhangzhang-workbench-v2';
 const ASSETS = [
   './',
   './index.html',
