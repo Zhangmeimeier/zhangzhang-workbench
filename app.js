@@ -59,7 +59,7 @@
   let appData = Storage.get();
 
   // ==================== 数据迁移（让新增默认内容补进已有存档，不覆盖用户数据）====================
-  const DATA_VERSION = 3;
+  const DATA_VERSION = 4;
   (function migrate() {
     try {
       if (appData.__v !== DATA_VERSION) {
@@ -70,20 +70,42 @@
           defTopics.forEach(t => { if (!have.has(t)) { appData.inspiration.topics.push(t); have.add(t); } });
         }
 
-        // 2. 对象数组：按唯一字段去重合并（新增默认项目自动补进已有存档）
+        // 2. 对象数组：按唯一字段合并（新增默认项目自动补进已有存档，保留用户已勾选状态）
+        //    positional=true 时按默认顺序插入新项（用于任务清单，保持课程顺序）；否则追加到末尾
         const arrayMerges = [
+          { path: ['workTasks', 'xingce'], idKey: 'id', positional: true },
+          { path: ['workTasks', 'shenlun'], idKey: 'id', positional: true },
           { path: ['inspiration', 'hotRemix'], idKey: 'title' },
           { path: ['moneyInfo'], idKey: 'id' },
           { path: ['news'], idKey: 'id' },
           { path: ['blogs'], idKey: 'id' }
         ];
-        arrayMerges.forEach(({ path, idKey }) => {
+        arrayMerges.forEach(({ path, idKey, positional }) => {
           let defArr = WBData;
           let savedArr = appData;
           for (const p of path) { defArr = defArr && defArr[p]; savedArr = savedArr && savedArr[p]; }
           defArr = defArr || [];
           savedArr = savedArr || [];
-          if (Array.isArray(savedArr) && Array.isArray(defArr)) {
+          if (!Array.isArray(savedArr) || !Array.isArray(defArr)) return;
+
+          if (positional) {
+            const savedMap = new Map(savedArr.map(item => [item && item[idKey], item]));
+            const result = [];
+            const used = new Set();
+            defArr.forEach(def => {
+              const id = def && def[idKey];
+              if (id != null && savedMap.has(id)) { result.push(savedMap.get(id)); used.add(id); }
+              else result.push(def);
+            });
+            // 保留存档中独有的自定义项（默认里没有的），追加到末尾
+            savedArr.forEach(s => {
+              const id = s && s[idKey];
+              if (id != null && !used.has(id) && !defArr.some(d => d && d[idKey] === id)) result.push(s);
+            });
+            let target = appData;
+            for (const p of path.slice(0, -1)) target = target[p];
+            target[path[path.length - 1]] = result;
+          } else {
             const haveIds = new Set(savedArr.map(item => item && item[idKey]).filter(v => v != null));
             defArr.forEach(item => {
               if (item && item[idKey] != null && !haveIds.has(item[idKey])) {

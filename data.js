@@ -7,6 +7,7 @@ const WBData = {
       { id: "xc1", text: "成语积累公式", done: false },
       { id: "xc2", text: "速算练习", done: false },
       { id: "xc3", text: "资料分析刷题", done: false },
+      { id: "xc9", text: "数量关系刷题", done: false },
       { id: "xc4", text: "判断推理刷题", done: false },
       { id: "xc5", text: "言语理解刷题", done: false },
       { id: "xc6", text: "政治理论课程", done: false },
