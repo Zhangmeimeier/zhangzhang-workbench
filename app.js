@@ -259,19 +259,26 @@
     btn.addEventListener('click', () => {
       Modal.show(`
         <div class="modal-title">确认重置？</div>
-        <p style="color:#7a7a99;font-size:14px;">将清空今日所有已完成勾选状态。</p>
+        <p style="color:#7a7a99;font-size:14px;">将清空本板块今日的勾选与生成内容（不影响收藏、历史记录）。</p>
         <div class="modal-actions">
           <button class="btn btn-sm" data-cancel>取消</button>
           <button class="btn btn-sm btn-primary" data-confirm>确认重置</button>
         </div>
       `, () => {
-        const keys = key.split('.');
-        const arr = keys.reduce((o, k) => o[k], appData);
-        arr.forEach(t => t.done = false);
+        // 仅当 key 指向一个真实数组时，重置其中对象的 done 状态
+        if (key) {
+          const keys = key.split('.');
+          let arr = appData;
+          for (const k of keys) {
+            if (arr && typeof arr === 'object' && arr[k] !== undefined) arr = arr[k];
+            else { arr = undefined; break; }
+          }
+          if (Array.isArray(arr)) arr.forEach(t => { if (t && typeof t === 'object') t.done = false; });
+        }
         save();
         if (callback) callback();
         else renderPage(container.closest('.page').dataset.page);
-        Toast.show('已重置今日任务');
+        Toast.show('已重置本板块');
       });
     });
   }
@@ -308,7 +315,7 @@
             <strong>🎯 今日重点：</strong>${randomXingce}
           </div>
           <div style="margin-top:10px;">
-            <button class="btn btn-sm btn-outline" data-random-xingce>🎲 随机轮换行测任务</button>
+            <button class="btn btn-sm btn-outline" data-random-xingce>🎲 随机轮换任务</button>
           </div>
         </div>
 
@@ -358,13 +365,19 @@
 
       attachTaskEvents(el, 'workTasks.xingce');
       attachTaskEvents(el, 'workTasks.shenlun');
-      attachReset(el, 'workTasks.xingce');
+      attachReset(el, null, () => {
+        appData.workTasks.xingce.forEach(t => t.done = false);
+        appData.workTasks.shenlun.forEach(t => t.done = false);
+        save();
+        renderPage('workTasks');
+      });
 
       el.querySelector('[data-random-xingce]').addEventListener('click', () => {
         data.xingce.sort(() => Math.random() - 0.5);
+        data.shenlun.sort(() => Math.random() - 0.5);
         save();
         renderPage('workTasks');
-        Toast.show('已随机轮换行测任务顺序');
+        Toast.show('已随机轮换行测与申论任务');
       });
 
       const imgInput = el.querySelector('#errorImgInput');
@@ -528,7 +541,7 @@
         });
       });
 
-      attachReset(el, 'wellness.tasks', () => {
+      attachReset(el, null, () => {
         data.water = 0;
         data.todayBreakfast = '';
         data.todayLunch = '';
@@ -593,6 +606,7 @@
         </div>
 
         <div class="page-footer">
+          <button class="btn btn-outline" id="randomDiet" style="width:100%;margin-bottom:10px;">🎲 随机生成减脂餐</button>
           <button class="btn btn-primary" id="exportDiet" style="width:100%;margin-bottom:10px;">📤 导出每日饮食报告</button>
           <button class="btn btn-outline" data-reset style="width:100%;">🔄 重置今日记录</button>
         </div>
@@ -640,6 +654,19 @@
           save();
           renderPage('diet');
         });
+      });
+
+      el.querySelector('#randomDiet').addEventListener('click', () => {
+        const meals = WBData.lifeManage.meals;
+        const snacks = ['无糖酸奶+蓝莓', '小番茄10颗', '苹果半个', '原味坚果一小把', '黄瓜一根', '水煮蛋1个'];
+        const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+        data.breakfast = pick(meals.breakfast);
+        data.lunch = pick(meals.lunch);
+        data.dinner = pick(meals.dinner);
+        data.snack = pick(snacks);
+        save();
+        renderPage('diet');
+        Toast.show('已生成今日减脂餐');
       });
 
       el.querySelector('#exportDiet').addEventListener('click', () => {
@@ -705,7 +732,10 @@
           </div>
         </div>
 
-        ${resetButtonHTML()}
+        <div class="page-footer">
+          <button class="btn btn-outline" id="randomExercise" style="width:100%;margin-bottom:10px;">🔀 随机排序今日训练</button>
+          <button class="btn btn-outline" data-reset style="width:100%;">🔄 一键批量重置今日任务</button>
+        </div>
       `;
 
       el.querySelectorAll('[data-exercise]').forEach(cb => {
@@ -786,7 +816,18 @@
         renderPage('exercise');
       });
 
-      attachReset(el, 'wellness.tasks', () => {
+      el.querySelector('#randomExercise').addEventListener('click', () => {
+        const items = data.weeklyPlan[day];
+        for (let i = items.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [items[i], items[j]] = [items[j], items[i]];
+        }
+        save();
+        renderPage('exercise');
+        Toast.show('今日训练已随机排序');
+      });
+
+      attachReset(el, null, () => {
         data.completed[todayKey] = [];
         save();
         renderPage('exercise');
@@ -807,6 +848,7 @@
             ${data.topics.map(t => `<span class="chip">${t}</span>`).join('')}
           </div>
           <button class="btn btn-sm btn-outline" id="refreshTopics">🔄 刷新选题</button>
+          <button class="btn btn-sm btn-outline" id="resetInspiration">🧹 清空我的记录</button>
           <textarea id="topicInput" placeholder="写下你的选题灵感..." style="margin-top:12px;">${data.myTopic || ''}</textarea>
         </div>
 
@@ -840,6 +882,24 @@
         save();
         renderPage('inspiration');
         Toast.show('选题已刷新');
+      });
+
+      el.querySelector('#resetInspiration').addEventListener('click', () => {
+        Modal.show(`
+          <div class="modal-title">确认清空？</div>
+          <p style="color:#7a7a99;font-size:14px;">将清空你手写的选题与内容复盘（默认选题列表保留）。</p>
+          <div class="modal-actions">
+            <button class="btn btn-sm" data-cancel>取消</button>
+            <button class="btn btn-sm btn-primary" data-confirm>确认清空</button>
+          </div>
+        `, () => {
+          data.myTopic = '';
+          data.review = '';
+          data.reviewDone = false;
+          save();
+          renderPage('inspiration');
+          Toast.show('已清空我的记录');
+        });
       });
 
       const topicInput = el.querySelector('#topicInput');
@@ -880,6 +940,10 @@
           </div>
         </div>
 
+        <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+          <button class="btn btn-sm btn-outline" id="randomNews">🔀 换一批</button>
+        </div>
+
         <div id="newsList">
           ${filtered.map(n => `
             <div class="list-item" data-news="${n.id}" style="cursor:pointer;">
@@ -909,6 +973,13 @@
         });
       });
 
+      el.querySelector('#randomNews').addEventListener('click', () => {
+        appData.news.sort(() => Math.random() - 0.5);
+        save();
+        renderPage('news');
+        Toast.show('已换一批新闻');
+      });
+
       el.querySelectorAll('[data-news]').forEach(item => {
         item.addEventListener('click', () => {
           const news = data.find(n => n.id == item.dataset.news);
@@ -929,7 +1000,9 @@
       const recommendations = WBData.books.filter(b => readTags.includes(b.tag) && !data.find(d => d.id === b.id));
 
       el.innerHTML = `
-        <div class="page-header"><div><h1 class="page-title">📚 成长书籍推荐</h1><p class="page-subtitle">每月更新，按阅读偏好推荐</p></div></div>
+        <div class="page-header"><div><h1 class="page-title">📚 成长书籍推荐</h1><p class="page-subtitle">每月更新，按阅读偏好推荐</p></div>
+          <button class="btn btn-orange btn-sm" id="randomBook" style="position:absolute;right:0;top:8px;">🎲 随机推荐</button>
+        </div>
 
         ${recommendations.length ? `
         <div class="card">
@@ -976,6 +1049,12 @@
           data[ta.dataset.book].note = ta.value;
           save();
         });
+      });
+
+      el.querySelector('#randomBook').addEventListener('click', () => {
+        const pool = WBData.books;
+        const b = pool[Math.floor(Math.random() * pool.length)];
+        Toast.show('🎲 随机推荐：《' + b.title + '》· ' + b.author);
       });
     },
 
@@ -1075,6 +1154,11 @@
       el.innerHTML = `
         <div class="page-header"><div><h1 class="page-title">💎 赚钱信息差</h1><p class="page-subtitle">发现机会，轻量尝试</p></div></div>
 
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button class="btn btn-sm btn-outline" id="randomMoney" style="flex:1;">🔀 换一批</button>
+          <button class="btn btn-sm btn-outline" id="resetMoney" style="flex:1;">☆ 取消全部收藏</button>
+        </div>
+
         <div id="moneyList">
           ${data.map((m, i) => `
             <div class="list-item">
@@ -1117,6 +1201,29 @@
         });
       });
 
+      el.querySelector('#randomMoney').addEventListener('click', () => {
+        data.sort(() => Math.random() - 0.5);
+        save();
+        renderPage('moneyInfo');
+        Toast.show('已换一批信息差');
+      });
+
+      el.querySelector('#resetMoney').addEventListener('click', () => {
+        Modal.show(`
+          <div class="modal-title">确认取消全部收藏？</div>
+          <p style="color:#7a7a99;font-size:14px;">将把所有信息差标记为未收藏。</p>
+          <div class="modal-actions">
+            <button class="btn btn-sm" data-cancel>取消</button>
+            <button class="btn btn-sm btn-primary" data-confirm>确认</button>
+          </div>
+        `, () => {
+          data.forEach(m => m.collected = false);
+          save();
+          renderPage('moneyInfo');
+          Toast.show('已取消全部收藏');
+        });
+      });
+
       el.querySelector('#addMoneyInfo').addEventListener('click', () => {
         const title = el.querySelector('#miTitle').value.trim();
         const content = el.querySelector('#miContent').value.trim();
@@ -1135,7 +1242,9 @@
       const today = new Date().toISOString().split('T')[0];
 
       el.innerHTML = `
-        <div class="page-header"><div><h1 class="page-title">🌟 自我提升</h1><p class="page-subtitle">修身修心，多维成长</p></div></div>
+        <div class="page-header"><div><h1 class="page-title">🌟 自我提升</h1><p class="page-subtitle">修身修心，多维成长</p></div>
+          <button class="btn btn-orange btn-sm" id="randomCourse" style="position:absolute;right:0;top:8px;">🎲 随机选一门</button>
+        </div>
 
         <div class="card">
           <div class="card-title"><span class="icon">🧘</span>修身修心功课</div>
@@ -1186,6 +1295,13 @@
         renderPage('selfImprovement');
       });
 
+      el.querySelector('#randomCourse').addEventListener('click', () => {
+        const keys = Object.keys(data.courses);
+        const k = keys[Math.floor(Math.random() * keys.length)];
+        const c = data.courses[k];
+        Toast.show('🎲 今天推荐学：' + c.name);
+      });
+
       const calendar = el.querySelector('#checkinCalendar');
       const days = ['日', '一', '二', '三', '四', '五', '六'];
       calendar.innerHTML = days.map(d => `<div class="calendar-day header">${d}</div>`).join('');
@@ -1198,8 +1314,9 @@
         calendar.innerHTML += `<div class="calendar-day ${checked ? 'checked' : 'missed'}" style="${isToday ? 'border:2px solid var(--accent-pink);' : ''}">${d.getDate()}</div>`;
       }
 
-      attachReset(el, 'selfImprovement.spiritual', () => {
-        data.checkins = {};
+      attachReset(el, null, () => {
+        const today = new Date().toISOString().split('T')[0];
+        Object.keys(data.checkins).forEach(k => { if (k.startsWith(today)) delete data.checkins[k]; });
         save();
         renderPage('selfImprovement');
       });
@@ -1210,7 +1327,9 @@
       const data = appData.blogs;
 
       el.innerHTML = `
-        <div class="page-header"><div><h1 class="page-title">📰 博客精选</h1><p class="page-subtitle">每周更新 · 公考 · 自媒体 · 成长</p></div></div>
+        <div class="page-header"><div><h1 class="page-title">📰 博客精选</h1><p class="page-subtitle">每周更新 · 公考 · 自媒体 · 成长</p></div>
+          <button class="btn btn-orange btn-sm" id="randomBlog" style="position:absolute;right:0;top:8px;">🔀 换一批</button>
+        </div>
 
         ${data.map(b => `
           <div class="list-item">
@@ -1237,6 +1356,13 @@
         });
       });
 
+      el.querySelector('#randomBlog').addEventListener('click', () => {
+        appData.blogs.sort(() => Math.random() - 0.5);
+        save();
+        renderPage('blogs');
+        Toast.show('已换一批博客');
+      });
+
       el.querySelectorAll('[data-read-blog]').forEach(btn => {
         btn.addEventListener('click', () => {
           const b = data.find(x => x.id == btn.dataset.readBlog);
@@ -1256,7 +1382,9 @@
       const data = appData.wellness;
 
       el.innerHTML = `
-        <div class="page-header"><div><h1 class="page-title">🍵 养生</h1><p class="page-subtitle">照顾好自己的身心</p></div></div>
+        <div class="page-header"><div><h1 class="page-title">🍵 养生</h1><p class="page-subtitle">照顾好自己的身心</p></div>
+          <button class="btn btn-orange btn-sm" id="randomWellness" style="position:absolute;right:0;top:8px;">🎲 随机建议</button>
+        </div>
 
         <div class="card">
           <div class="card-title"><span class="icon">💡</span>今日养生建议</div>
@@ -1296,6 +1424,15 @@
         input.value = '';
         save();
         renderPage('wellness');
+      });
+
+      el.querySelector('#randomWellness').addEventListener('click', () => {
+        const tips = WBData.wellness.tips;
+        const shuffled = tips.slice().sort(() => Math.random() - 0.5);
+        data.tips = shuffled;
+        save();
+        renderPage('wellness');
+        Toast.show('养生建议已随机');
       });
 
       attachReset(el, 'wellness.tasks');
