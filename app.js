@@ -59,7 +59,7 @@
   let appData = Storage.get();
 
   // ==================== 数据迁移（让新增默认内容补进已有存档，不覆盖用户数据）====================
-  const DATA_VERSION = 4;
+  const DATA_VERSION = 5;
   (function migrate() {
     try {
       if (appData.__v !== DATA_VERSION) {
@@ -115,6 +115,14 @@
             });
           }
         });
+
+        // 3. 热量词典：补充新增食材（对象合并，仅补入存档中没有的新 key）
+        if (appData.diet && WBData.diet && WBData.diet.calories) {
+          const savedCal = (appData.diet.calories && typeof appData.diet.calories === 'object') ? appData.diet.calories : {};
+          const defCal = WBData.diet.calories;
+          for (const k in defCal) { if (!(k in savedCal)) savedCal[k] = defCal[k]; }
+          appData.diet.calories = savedCal;
+        }
 
         appData.__v = DATA_VERSION;
         save();
@@ -591,10 +599,13 @@
 
         <div class="card">
           <div class="card-title"><span class="icon">🔥</span>热量计算</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <input type="text" id="calFood" list="foodList" placeholder="食材名称" style="flex:1;min-width:120px;">
-            <datalist id="foodList">${Object.keys(data.calories).map(f => `<option value="${f}">`).join('')}</datalist>
-            <input type="number" id="calWeight" placeholder="克数" style="width:90px;">
+          <p style="color:#7a7a99;font-size:13px;margin:0 0 10px;">选择食材并输入克数，自动算出热量。</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <select id="calFood" style="flex:1;min-width:120px;padding:10px;border:1px solid #ffd6e7;border-radius:10px;font-size:14px;background:#fff;color:#444;">
+              <option value="">选择食材</option>
+              ${Object.entries((data.calories) || {}).map(([f, k]) => `<option value="${f}">${f}（${k}kcal/100g）</option>`).join('')}
+            </select>
+            <input type="number" id="calWeight" placeholder="克数" style="width:90px;padding:10px;border:1px solid #ffd6e7;border-radius:10px;font-size:14px;background:#fff;color:#444;">
             <button class="btn btn-mint" id="addCal">计算</button>
           </div>
           <div id="calResult" style="margin-top:12px;"></div>
@@ -635,14 +646,15 @@
       `;
 
       el.querySelector('#addCal').addEventListener('click', () => {
-        const name = el.querySelector('#calFood').value.trim();
+        const cal = (data.calories && typeof data.calories === 'object') ? data.calories : (WBData.diet.calories || {});
+        const name = el.querySelector('#calFood').value;
         const weight = parseFloat(el.querySelector('#calWeight').value);
-        if (!name || !weight || !data.calories[name]) {
-          Toast.show('请选择列表中的食材并输入克数');
+        if (!name || isNaN(weight) || weight <= 0 || !cal[name]) {
+          Toast.show('请先选择食材，并输入大于 0 的克数');
           return;
         }
         if (!data.calList) data.calList = [];
-        const total = Math.round(data.calories[name] * weight / 100);
+        const total = Math.round(cal[name] * weight / 100);
         data.calList.push({ name, weight, total });
         el.querySelector('#calFood').value = '';
         el.querySelector('#calWeight').value = '';
